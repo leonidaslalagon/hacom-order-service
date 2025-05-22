@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: Hacom Order Service
+
+server:
+  port: ${apiPort:9898}
+
+# MongoDB Configuration
+mongodb:
+  database: ${mongodbDatabase:hacom-order}
+  uri: ${mongodbUri:mongodb://127.0.0.1:27017}
+
+
+# API Configuration
+api:
+  port: ${apiPort:9898}
+
+# gRPC Configuration
+grpc:
+  server:
+    port: 9090
+
+# SMPP Configuration
+smpp:
+  host: localhost
+  port: 2776
+  systemId: esme
+  password: esme
+  systemType: cp
+  interfaceVersion: 0x34
+  addressTon: 0x00
+  addressNpi: 0x01
+  sourceAddress: "1234"
+  enabled: true
+
+# Prometheus, Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+## Logging Configuration
+#logging:
+#  config: classpath:log4j2.yml
