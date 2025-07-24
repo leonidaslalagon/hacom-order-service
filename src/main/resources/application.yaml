@@ -31,6 +31,22 @@ smpp:
   addressTon: 0x00
   addressNpi: 0x01
   sourceAddress: "1234"
+
+email:
+  enabled: true
+  from: "noreply@hacom.com"
+spring:
+  mail:
+    host: "smtp.gmail.com"
+    port: 587
+    username: "your-email@gmail.com"
+    password: "your-password"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   enabled: true
 
 # Prometheus, Actuator

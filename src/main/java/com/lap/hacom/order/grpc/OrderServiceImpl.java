@@ -20,24 +20,11 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
 
-    private final ActorSystem actorSystem;
-    private final OrderRepository orderRepository;
-    private final SmppService smppService;
     private final ActorRef orderProcessorActor;
 
     @Autowired
-    public OrderServiceImpl(ActorSystem actorSystem, OrderRepository orderRepository,
-                            SmppService smppService, MeterRegistry meterRegistry) {
-        this.actorSystem = actorSystem;
-        this.orderRepository = orderRepository;
-        this.smppService = smppService;
-
-        // Create order processor actor
-        this.orderProcessorActor = actorSystem.actorOf(
-                OrderProcessorActor.props(orderRepository, smppService, meterRegistry),
-                "order-processor-actor"
-        );
-
+    public OrderServiceImpl(ActorRef orderProcessorActor) {
+        this.orderProcessorActor = orderProcessorActor;
         logger.info("OrderService gRPC implementation initialized with actor system");
     }
 
@@ -64,6 +51,7 @@ public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
                             request.getOrderId(),
                             request.getCustomerId(),
                             request.getCustomerPhoneNumber(),
+                            request.getCustomerEmail(),
                             items,
                             responseObserver
                     );

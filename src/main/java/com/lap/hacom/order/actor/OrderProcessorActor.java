@@ -5,6 +5,7 @@ import akka.actor.Props;
 import com.lap.hacom.order.grpc.CreateOrderResponse;
 import com.lap.hacom.order.model.Order;
 import com.lap.hacom.order.repository.OrderRepository;
+import com.lap.hacom.order.service.EmailService;
 import com.lap.hacom.order.service.SmppService;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Counter;
@@ -21,17 +22,19 @@ public class OrderProcessorActor extends AbstractActor {
 
     private final OrderRepository orderRepository;
     private final SmppService smppService;
+    private final EmailService emailService;
     private final Counter orderCounter;
 
 
-    public static Props props(OrderRepository orderRepository, SmppService smppService, MeterRegistry meterRegistry) {
+    public static Props props(OrderRepository orderRepository, SmppService smppService, EmailService emailService, MeterRegistry meterRegistry) {
         return Props.create(OrderProcessorActor.class,
-                () -> new OrderProcessorActor(orderRepository, smppService, meterRegistry));
+                () -> new OrderProcessorActor(orderRepository, smppService, emailService, meterRegistry));
     }
 
-    public OrderProcessorActor(OrderRepository orderRepository, SmppService smppService, MeterRegistry meterRegistry) {
+    public OrderProcessorActor(OrderRepository orderRepository, SmppService smppService, EmailService emailService, MeterRegistry meterRegistry) {
         this.orderRepository = orderRepository;
         this.smppService = smppService;
+        this.emailService = emailService;
         this.orderCounter = Counter.builder("hacom.orders.processed.total")
                 .description("Total number of orders processed")
                 .register(meterRegistry);
@@ -41,14 +44,16 @@ public class OrderProcessorActor extends AbstractActor {
         private final String orderId;
         private final String customerId;
         private final String customerPhoneNumber;
+        private final String customerEmail;
         private final List<String> items;
         private final StreamObserver<CreateOrderResponse> responseObserver;
 
-        public ProcessOrderMessage(String orderId, String customerId, String customerPhoneNumber,
+        public ProcessOrderMessage(String orderId, String customerId, String customerPhoneNumber, String customerEmail,
                                    List<String> items, StreamObserver<CreateOrderResponse> responseObserver) {
             this.orderId = orderId;
             this.customerId = customerId;
             this.customerPhoneNumber = customerPhoneNumber;
+            this.customerEmail = customerEmail;
             this.items = items;
             this.responseObserver = responseObserver;
         }
@@ -56,6 +61,7 @@ public class OrderProcessorActor extends AbstractActor {
         public String getOrderId() { return orderId; }
         public String getCustomerId() { return customerId; }
         public String getCustomerPhoneNumber() { return customerPhoneNumber; }
+        public String getCustomerEmail() { return customerEmail; }
         public List<String> getItems() { return items; }
         public StreamObserver<CreateOrderResponse> getResponseObserver() { return responseObserver; }
     }
@@ -77,6 +83,7 @@ public class OrderProcessorActor extends AbstractActor {
                     message.getOrderId(),
                     message.getCustomerId(),
                     message.getCustomerPhoneNumber(),
+                    message.getCustomerEmail(),
                     "PROCESSING",
                     message.getItems(),
                     OffsetDateTime.now()
@@ -105,6 +112,17 @@ public class OrderProcessorActor extends AbstractActor {
                                         logger.info("SMS notification sent successfully for order: {}", completedOrder.getOrderId());
                                     } else {
                                         logger.warn("Failed to send SMS notification for order: {}", completedOrder.getOrderId());
+                                    }
+
+                                    // Send Email notification
+                                    String emailSubject = "Your order " + completedOrder.getOrderId() + " has been processed";
+                                    String emailBody = "Thank you for your order. Your order with ID " + completedOrder.getOrderId() + " has been successfully processed.";
+                                    boolean emailSent = emailService.sendEmail(completedOrder.getCustomerEmail(), emailSubject, emailBody);
+
+                                    if (emailSent) {
+                                        logger.info("Email notification sent successfully for order: {}", completedOrder.getOrderId());
+                                    } else {
+                                        logger.warn("Failed to send email notification for order: {}", completedOrder.getOrderId());
                                     }
 
                                     // Increment metrics counter

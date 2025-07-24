@@ -20,6 +20,7 @@ public class Order {
     private String orderId;
     private String customerId;
     private String customerPhoneNumber;
+    private String customerEmail;
     private String status;
     private List<String> items;
     private OffsetDateTime ts;
